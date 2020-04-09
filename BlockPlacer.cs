@@ -3,8 +3,15 @@ using System.Collections;
  
 public class BlockPlacer : MonoBehaviour {
 	
-	public Material highlightCubeMaterial;
-	public Material cubeMaterial;
+	Vector3 currentPotentialBlock;
+	Vector3 prevPotentialBlock;
+	GameObject highlightBlock;
+	
+	//Define the grid dimensions for blocks:
+	Vector3 Grid = new Vector3(0.15f, 0.15f, 0.15f);
+	
+	//Toggle variable for highlight block:
+	public bool blockHighlight = false;
  
     //Handles # of blocks the user has
     public bool unlimitedBlocks = false;
@@ -18,134 +25,159 @@ public class BlockPlacer : MonoBehaviour {
  
     //The block prefab to instantiate
     public GameObject blockPrefab;
+	
+	//The transparent prefab to instantiate:
+	public GameObject highlightBlockPrefab;
  
     //Maximum range that the player can place a block from
     public float range = 7f;
+	
+	
+	bool isValidVector(Vector3 vector) {
+		
+		if (vector.x >= (GameObject.Find("PlayArea").transform.position.x - GameObject.Find("PlayArea").transform.localScale.x) && 
+			vector.x <= (GameObject.Find("PlayArea").transform.position.x + GameObject.Find("PlayArea").transform.localScale.x) &&
+			vector.y >= (.995) && vector.y <= (2) &&
+			vector.z >= (GameObject.Find("PlayArea").transform.position.z - GameObject.Find("PlayArea").transform.localScale.z) &&
+			vector.z <= (GameObject.Find("PlayArea").transform.position.z + GameObject.Find("PlayArea").transform.localScale.z)
+			) 
+		{
+			return true;
+		}
+		
+		return false;
+	}
  
-        void Start () {
-        //This assigns the static reference
-        BlockPlacer.obj = this;
-        }
-       
-        void Update () {
-			
-			
-			
-			
-			
+    void Start () {
+
+    	//This assigns the static reference
+    	BlockPlacer.obj = this;
+    }
+
+    void Update () {
+	
+	
+		//Block highlight system:
+		if (blockHighlight) {
+		
         	//Make a ray and raycasthit for a raycast
         	Ray ray1 = new Ray(transform.position, transform.TransformDirection(Vector3.forward));
         	RaycastHit hit1;
-			GameObject previousObject = null;
 
         	//Perform the raycast
-        	if (Physics.Raycast(ray1, out hit1, range))
-        	{	
-				//don't highlight the ground
-				if (hit1.collider.gameObject.name != "Ground")
-				{
-					
-					GameObject currentObject = hit1.collider.gameObject;
-					
-					//view has switched to a different cube
-					if (currentObject != previousObject)
-					{
-						Debug.Log("looking at new cube");
-						//return color of previousObject to regular:
-						previousObject.GetComponent<MeshRenderer> ().material = cubeMaterial;
-						//set color of currentObject to highlight:
-						currentObject.GetComponent<MeshRenderer> ().material = highlightCubeMaterial;
-						
-						//set currentObject as previous:
-						previousObject = currentObject;
+        	if (Physics.Raycast(ray1, out hit1, range)) {
+
+				Vector3 placeAt = ray1.GetPoint(hit1.distance - 0.1f);
+		
+				currentPotentialBlock = new Vector3(Mathf.Round(placeAt.x / Grid.x) * Grid.x,
+			                       Mathf.Round(placeAt.y / Grid.y) * Grid.y,
+			                       Mathf.Round(placeAt.z / Grid.z) * Grid.z);
+		
+				//make sure the vector is within the play bounds
+				if (isValidVector(placeAt)) {
+		
+					//check if the potential block position has changed:
+					if (currentPotentialBlock != prevPotentialBlock) {
+			
+						//destory the old highlightBlock
+						Destroy(highlightBlock);
+			
+						//Instantiate a new highlightBlock using the currentPotentialBlock vector
+						highlightBlock = (GameObject)GameObject.Instantiate(highlightBlockPrefab, currentPotentialBlock, Quaternion.Euler(Vector3.zero));
+			
+						//set the previous potentialBlock to the current one
+						prevPotentialBlock = currentPotentialBlock;
+			
 					}
-					
 				}
-			}	
-		
-		
-		
-		
-		
-				
-        //Locks the cursor. Running this in update is only done because of weird unity editor shenanigans with cursor locking
-               
-        if (lockCursor)
-                        /// ERRORS? Are you getting errors on the following line of code?
-                        /// If so, you're probably using Unity 4 or earlier.
-                        /// To fix this, add // to the start of the following line
-            Cursor.lockState = CursorLockMode.Locked;
-                        /// And remove // from the start of the next line of code
-                        //Cursor.lockCursor = true;
- 
+				else {
+					Destroy(highlightBlock);
+				}
+			}
+		}
+
+	    //Locks the cursor. Running this in update is only done because of weird unity editor shenanigans with cursor locking
+   
+	    if (lockCursor)
+            /// ERRORS? Are you getting errors on the following line of code?
+            /// If so, you're probably using Unity 4 or earlier.
+            /// To fix this, add // to the start of the following line
+	        Cursor.lockState = CursorLockMode.Locked;
+            /// And remove // from the start of the next line of code
+            //Cursor.lockCursor = true;
+
         //Make sure the player has enough blocks
-        if (blocksLeft > 0 || unlimitedBlocks)
-        {
+        if (blocksLeft > 0 || unlimitedBlocks) {
             //Place blocks using the LMB
-            if (Input.GetMouseButtonDown(0))
-            {
+            if (Input.GetMouseButtonDown(0)) {
                 //Make a ray and raycasthit for a raycast
                 Ray ray = new Ray(transform.position, transform.TransformDirection(Vector3.forward));
                 RaycastHit hit;
- 
+
                 //Perform the raycast
-                if (Physics.Raycast(ray, out hit, range))
-                {
-					
+                if (Physics.Raycast(ray, out hit, range)) {
+			
                     //The raycast is backed up so that placing works and won't place blocks inside of the ground.
                     //After testing, 0.2 units back had the best result
-                    Vector3 backup = ray.GetPoint(hit.distance - 0.2f);
-					
-					Vector3 Grid = new Vector3(0.5f, 0.5f, 0.5f);
-					
+                    Vector3 backup = ray.GetPoint(hit.distance - 0.1f);
+			
+					//Round the placement so the blocks snap to the grid
 				    Vector3 placeAt = new Vector3(Mathf.Round(backup.x / Grid.x) * Grid.x,
 				                       Mathf.Round(backup.y / Grid.y) * Grid.y,
 				                       Mathf.Round(backup.z / Grid.z) * Grid.z);
- 
-                    //Round the placement so they place like blocks should
-                    //Vector3 placeAt = new Vector3(Mathf.RoundToInt((backup.x / Grid.x) * Grid.x), Mathf.RoundToInt((backup.y / Grid.y) * Grid.y), Mathf.RoundToInt((backup.z / Grid.z) * Grid.z));
- 
-                    //Instantiate the block and save it so that we can do other stuff with it later
-                    GameObject block = (GameObject)GameObject.Instantiate(blockPrefab, placeAt, Quaternion.Euler(Vector3.zero));
- 
-                    //Remove a block from the player's "inventory"
-                    if (!unlimitedBlocks)
-                        blocksLeft--;
- 
-                    //If the block collides with the player, remove it. We don't want the player to get stuck in their own blocks.
-                    if (block.GetComponent<Collider>().bounds.Intersects(this.transform.parent.GetComponent<Collider>().bounds))
-                    {
-                        //If they are, destroy the block
-                        GameObject.Destroy(block);
-                        //Make sure that the player gets their misplaced block back.
-                        if (!unlimitedBlocks)
-                            blocksLeft++;
-                    }
+				
+					//make sure the vector is within the play bounds
+					if (isValidVector(placeAt)) {
+					
+	                    //Instantiate the block and save it so that we can do other stuff with it later
+	                    GameObject block = (GameObject)GameObject.Instantiate(blockPrefab, placeAt, Quaternion.Euler(Vector3.zero));
+
+						Debug.Log("Vector x: " + placeAt.x);
+						Debug.Log("Vector y: " + placeAt.y);
+						Debug.Log("Vector z: " + placeAt.z);
+						
+
+	                    //Remove a block from the player's "inventory"
+	                    if (!unlimitedBlocks)
+	                        blocksLeft--;
+
+	                    //If the block collides with the player, remove it. We don't want the player to get stuck in their own blocks.
+	                    if (block.GetComponent<Collider>().bounds.Intersects(this.transform.parent.GetComponent<Collider>().bounds)) {
+	                        //If they are, destroy the block
+	                        GameObject.Destroy(block);
+	                        //Make sure that the player gets their misplaced block back.
+	                        if (!unlimitedBlocks)
+	                            blocksLeft++;
+	                    }
+					
+					}
+				
+					else {
+						Debug.Log("Error: Out of Bounds.");
+					}
+
                 }
             }
         }
-		
+
         //Destroy blocks using the LMB
-        if (Input.GetMouseButtonDown(1))
-        {
-			
+        if (Input.GetMouseButtonDown(1)) {
+	
             //Make a ray and raycasthit for a raycast
             Ray ray = new Ray(transform.position, transform.TransformDirection(Vector3.forward));
             RaycastHit hit;
 
             //Perform the raycast
-            if (Physics.Raycast(ray, out hit, range))
-            {	
-				//make sure the player can't destroy the ground
-				if (hit.collider.gameObject.name != "Ground")
-				{
+            if (Physics.Raycast(ray, out hit, range)) {	
+				//Only cubes can be destroyed:
+				if (hit.collider.gameObject.name == "Cube(Clone)") {
 					Debug.Log(hit.collider.gameObject);
 					Destroy(hit.collider.gameObject);
 				}
 			}
 		}
-		
-        }
+
+    }
  
     void OnGUI()
     {
