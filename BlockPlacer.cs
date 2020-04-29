@@ -1,11 +1,13 @@
 ﻿using UnityEngine;
 using System.Collections;
+using System.Collections.Generic;
  
 public class BlockPlacer : MonoBehaviour {
 	
 	Vector3 currentPotentialBlock;
 	Vector3 prevPotentialBlock;
 	GameObject highlightBlock;
+	GameObject modelBlock;
 	
 	//Define the grid dimensions for blocks:
 	Vector3 Grid = new Vector3(0.15f, 0.15f, 0.15f);
@@ -32,6 +34,34 @@ public class BlockPlacer : MonoBehaviour {
     //Maximum range that the player can place a block from
     public float range = 7f;
 	
+	public GameObject tutorialBlock;
+	public string Difficulty;
+	
+	//define 3d array for model
+	int[,,] model_easy = new int[,,] {{{1, 1, 1, 1}, {1, 0, 0, 1}, {1, 0, 0, 1}, {1, 1, 1, 1} }, { {1, 1, 1, 1}, {1, 0, 0, 1}, {1, 0, 0, 1}, {1, 1, 1, 1}}};
+	int[,,] model_medium = new int[,,] {{{0, 1, 1, 1}, {1, 1, 0, 0}, {0, 0, 1, 1}, {1, 1, 1, 0}}, {{0, 1, 1, 0}, {1, 1, 0, 0}, {0, 0, 1, 0}, {0, 1, 1, 0}}, {{0, 0, 1, 0}, {1, 1, 0, 0}, {0, 0, 1, 0}, {0, 1, 0, 0}}};
+	int[,,] model_hard = new int[,,] {{{1, 1, 0, 1, 1}, {0, 0, 1, 0, 0}, {0, 0, 1, 0, 0}, {1, 1, 0, 1, 1}}, {{0, 1, 0, 1, 1}, {0, 0, 1, 0, 0}, {0, 0, 1, 0, 0}, {1, 1, 0, 1, 0}}, {{0, 1, 0, 1, 0}, {0, 0, 1, 0, 0}, {0, 0, 1, 0, 0}, {0, 1, 0, 1, 0}}, {{0, 1, 0, 1, 0}, {0, 0, 0, 0, 0}, {0, 0, 0, 0, 0}, {0, 1, 0, 1, 0}}};
+	
+	int[,,] model = new int[,,]{};
+	
+	//counter to keep track of modelVectors
+	int counter = 0;
+	
+	//create list to hold model vectors:
+	List<Vector3> modelVectors = new List<Vector3>();
+	
+	void placeBlock(Vector3 vector) {
+		
+		//Round the placement so the blocks snap to the grid
+	    Vector3 placeAt = new Vector3(Mathf.Round(vector.x / Grid.x) * Grid.x,
+	                       Mathf.Round(vector.y / Grid.y) * Grid.y,
+	                       Mathf.Round(vector.z / Grid.z) * Grid.z);
+
+        //Instantiate the block and save it so that we can do other stuff with it later
+        GameObject block = (GameObject)GameObject.Instantiate(tutorialBlock, placeAt, Quaternion.Euler(Vector3.zero));
+	
+	}
+	
 	
 	bool isValidVector(Vector3 vector) {
 		
@@ -52,7 +82,67 @@ public class BlockPlacer : MonoBehaviour {
 
     	//This assigns the static reference
     	BlockPlacer.obj = this;
+		
+		
+		//get difficulty setting from script variables
+		if (Difficulty == "easy"){
+			model = model_easy;
+		}
+		if (Difficulty == "medium"){
+			model = model_medium;
+		}
+		if (Difficulty == "hard"){
+			model = model_hard;
+		}
+		else {
+			Debug.Log("Invalid difficulty setting: options are easy, medium, hard");
+		}	
+		
+		//traverse through 3D model array and put the vectors into a list
+		
+		//Define the reference position:
+		float origin_x = 0f;
+		float origin_y = -.6f;
+		float origin_z = 1.05f;
+		
+		int uBound0 = model.GetUpperBound(0);
+		int uBound1 = model.GetUpperBound(1);
+		int uBound2 = model.GetUpperBound(2);
+		
+		//Iterate through the 3D model array and place blocks where a 1 appears
+		for (int z = 0; z <= uBound0; z++) {
+			for (int y = 0; y <= uBound1; y++) {
+				for (int x = 0; x <= uBound2; x++) {
+
+					if (model[z, y, x] == 1) {
+						
+						Vector3 newVector = new Vector3(origin_x + (float)(x * .15),origin_z + (float)(z * .15),origin_y + (float)(y * .15));
+						
+						//add the vector to the list:
+						modelVectors.Add(newVector);
+						
+					}
+				}
+			}
+		}
+		
+		//add the first block of the model:
+		
+		//Round the placement so the blocks snap to the grid
+	    Vector3 placeModel = new Vector3(Mathf.Round(modelVectors[counter].x / Grid.x) * Grid.x,
+	                       Mathf.Round(modelVectors[counter].y / Grid.y) * Grid.y,
+	                       Mathf.Round(modelVectors[counter].z / Grid.z) * Grid.z);
+
+        //Instantiate the block and save it so that we can do other stuff with it later
+        modelBlock = (GameObject)GameObject.Instantiate(tutorialBlock, placeModel, Quaternion.Euler(Vector3.zero));
+		
+		counter += 1;
+		
     }
+	
+	
+	//When user does a thing:
+	//Iterate through array until 1 is located, instantiate this block and stop
 
     void Update () {
 	
@@ -72,6 +162,8 @@ public class BlockPlacer : MonoBehaviour {
 				currentPotentialBlock = new Vector3(Mathf.Round(placeAt.x / Grid.x) * Grid.x,
 			                       Mathf.Round(placeAt.y / Grid.y) * Grid.y,
 			                       Mathf.Round(placeAt.z / Grid.z) * Grid.z);
+				
+				
 		
 				//make sure the vector is within the play bounds
 				if (isValidVector(placeAt)) {
@@ -128,13 +220,36 @@ public class BlockPlacer : MonoBehaviour {
 				
 					//make sure the vector is within the play bounds
 					if (isValidVector(placeAt)) {
+						
+						
+						
+						//iterate through the tutorial:
+						if (counter < modelVectors.Count) {
+							
+							Debug.Log("counter is: " + counter + " and list size is: " + modelVectors.Count);
+							//placeBlock(modelVectors[counter]);
+							
+							Destroy(modelBlock);
+							
+							//Round the placement so the blocks snap to the grid
+						    Vector3 placeModel = new Vector3(Mathf.Round(modelVectors[counter].x / Grid.x) * Grid.x,
+						                       Mathf.Round(modelVectors[counter].y / Grid.y) * Grid.y,
+						                       Mathf.Round(modelVectors[counter].z / Grid.z) * Grid.z);
+
+					        //Instantiate the block and save it so that we can do other stuff with it later
+					        modelBlock = (GameObject)GameObject.Instantiate(tutorialBlock, placeModel, Quaternion.Euler(Vector3.zero));
+							
+							counter += 1;
+							
+						}
+					
 					
 	                    //Instantiate the block and save it so that we can do other stuff with it later
 	                    GameObject block = (GameObject)GameObject.Instantiate(blockPrefab, placeAt, Quaternion.Euler(Vector3.zero));
 
-						Debug.Log("Vector x: " + placeAt.x);
-						Debug.Log("Vector y: " + placeAt.y);
-						Debug.Log("Vector z: " + placeAt.z);
+						//Debug.Log("Vector x: " + placeAt.x);
+						//Debug.Log("Vector y: " + placeAt.y);
+						//Debug.Log("Vector z: " + placeAt.z);
 						
 
 	                    //Remove a block from the player's "inventory"
