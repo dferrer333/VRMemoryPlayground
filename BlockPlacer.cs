@@ -8,6 +8,7 @@ public class BlockPlacer : MonoBehaviour {
 	Vector3 prevPotentialBlock;
 	GameObject highlightBlock;
 	GameObject modelBlock;
+	Vector3 modelBlockVector;
 	
 	//Define the grid dimensions for blocks:
 	Vector3 Grid = new Vector3(0.15f, 0.15f, 0.15f);
@@ -135,6 +136,7 @@ public class BlockPlacer : MonoBehaviour {
 
         //Instantiate the block and save it so that we can do other stuff with it later
         modelBlock = (GameObject)GameObject.Instantiate(tutorialBlock, placeModel, Quaternion.Euler(Vector3.zero));
+		modelBlockVector = placeModel;
 		
 		counter += 1;
 		
@@ -142,7 +144,6 @@ public class BlockPlacer : MonoBehaviour {
 	
 	
 	//When user does a thing:
-	//Iterate through array until 1 is located, instantiate this block and stop
 
     void Update () {
 	
@@ -222,25 +223,29 @@ public class BlockPlacer : MonoBehaviour {
 					if (isValidVector(placeAt)) {
 						
 						
+						//check that the current position matches the last tutorialBlock
+						if (placeAt == modelBlockVector){
 						
-						//iterate through the tutorial:
-						if (counter < modelVectors.Count) {
+							//iterate through the tutorial:
+							if (counter < modelVectors.Count) {
 							
-							Debug.Log("counter is: " + counter + " and list size is: " + modelVectors.Count);
-							//placeBlock(modelVectors[counter]);
+								Debug.Log("counter is: " + counter + " and list size is: " + modelVectors.Count);
+								//placeBlock(modelVectors[counter]);
 							
-							Destroy(modelBlock);
+								Destroy(modelBlock);
 							
-							//Round the placement so the blocks snap to the grid
-						    Vector3 placeModel = new Vector3(Mathf.Round(modelVectors[counter].x / Grid.x) * Grid.x,
-						                       Mathf.Round(modelVectors[counter].y / Grid.y) * Grid.y,
-						                       Mathf.Round(modelVectors[counter].z / Grid.z) * Grid.z);
+								//Round the placement so the blocks snap to the grid
+							    Vector3 placeModel = new Vector3(Mathf.Round(modelVectors[counter].x / Grid.x) * Grid.x,
+							                       Mathf.Round(modelVectors[counter].y / Grid.y) * Grid.y,
+							                       Mathf.Round(modelVectors[counter].z / Grid.z) * Grid.z);
 
-					        //Instantiate the block and save it so that we can do other stuff with it later
-					        modelBlock = (GameObject)GameObject.Instantiate(tutorialBlock, placeModel, Quaternion.Euler(Vector3.zero));
+						        //Instantiate the block and save it so that we can do other stuff with it later
+						        modelBlock = (GameObject)GameObject.Instantiate(tutorialBlock, placeModel, Quaternion.Euler(Vector3.zero));
+								modelBlockVector = placeModel;
+								
+								counter += 1;
 							
-							counter += 1;
-							
+							}
 						}
 					
 					
